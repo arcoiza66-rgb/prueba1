@@ -1,1 +1,17 @@
-
+Fecha,Liga,Local,Visitante,Carreras_L,Carreras_V,Gano_Local_Real,Estado
+2026-10-22,NBA,Boston Celtics,New York Knicks,132,109,1,post
+2026-10-22,NBA,Los Angeles Lakers,Minnesota Timberwolves,110,103,1,post
+2026-10-24,NBA,Denver Nuggets,Oklahoma City Thunder,87,102,0,post
+2026-10-25,NBA,Boston Celtics,Washington Wizards,122,102,1,post
+2026-10-25,NBA,Los Angeles Lakers,Phoenix Suns,123,116,1,post
+2026-10-26,NBA,Denver Nuggets,LA Clippers,104,109,0,post
+2026-10-27,NBA,Oklahoma City Thunder,Atlanta Hawks,128,104,1,post
+2026-10-28,NBA,New York Knicks,Cleveland Cavaliers,104,110,0,post
+2026-10-28,NBA,Phoenix Suns,Los Angeles Lakers,109,105,1,post
+2026-10-29,NBA,Minnesota Timberwolves,Dallas Mavericks,114,120,0,post
+2026-10-30,NBA,Cleveland Cavaliers,Los Angeles Lakers,134,110,1,post
+2026-11-01,NBA,Boston Celtics,Charlotte Hornets,124,109,1,post
+2026-11-02,NBA,Oklahoma City Thunder,LA Clippers,105,92,1,post
+2026-11-03,NBA,Dallas Mavericks,Orlando Magic,108,85,1,post
+2026-11-04,NBA,Denver Nuggets,Toronto Raptors,121,119,1,post
+2026-11-05,NBA,Cleveland Cavaliers,Milwaukee Bucks,116,114,1,post
