@@ -1,10 +1,12 @@
 import csv
 import math
 import os
-
-ICE_PREVIA_MAX = 59.9
-ICE_DULCE_MIN = 60.0
-ICE_DULCE_MAX = 75.0
+from config import (
+    DEFAULT_CSV_PATH,
+    ICE_PREVIA_MAX,
+    ICE_DULCE_MIN,
+    ICE_DULCE_MAX,
+)
 
 
 def determinar_zona(ice: float) -> str:
@@ -17,7 +19,7 @@ def determinar_zona(ice: float) -> str:
     return "Por encima de la Dulce"
 
 
-def cargar_partidos_csv(ruta_csv: str) -> list[dict]:
+def cargar_partidos_csv(ruta_csv: str = DEFAULT_CSV_PATH) -> list[dict]:
     if not os.path.exists(ruta_csv):
         return []
     partidos = []
@@ -43,62 +45,60 @@ def calcular_matriz_pura(partidos: list[dict]) -> list[dict]:
         vis = r["Visitante"].strip()
         c_l = float(r.get("Carreras_L", 0))
         c_v = float(r.get("Carreras_V", 0))
-        g_l = int(r.get("Gano_Local_Real", 0))
+        gano_l = int(r["Gano_Local_Real"])
 
         for eq in (loc, vis):
             if eq not in stats:
-                stats[eq] = {"j_tot": 0, "vic": 0, "cf": [], "cc": []}
+                stats[eq] = {"jj": 0, "jg": 0, "cf": 0.0, "cc": 0.0}
 
-        stats[loc]["j_tot"] += 1
-        stats[loc]["vic"] += g_l
-        stats[loc]["cf"].append(c_l)
-        stats[loc]["cc"].append(c_v)
+        stats[loc]["jj"] += 1
+        stats[loc]["jg"] += gano_l
+        stats[loc]["cf"] += c_l
+        stats[loc]["cc"] += c_v
 
-        stats[vis]["j_tot"] += 1
-        stats[vis]["vic"] += 1 - g_l
-        stats[vis]["cf"].append(c_v)
-        stats[vis]["cc"].append(c_l)
+        stats[vis]["jj"] += 1
+        stats[vis]["jg"] += (1 - gano_l)
+        stats[vis]["cf"] += c_v
+        stats[vis]["cc"] += c_l
 
     matriz = []
-    eqs = list(stats.keys())
-    for i in range(len(eqs)):
-        for j in range(len(eqs)):
-            if i == j:
-                continue
-            loc, vis = eqs[i], eqs[j]
-            st_l, st_v = stats[loc], stats[vis]
-            n_l, n_v = st_l["j_tot"], st_v["j_tot"]
-            if n_l < 2 or n_v < 2:
-                continue
+    seen_pairs = set()
+    for r in validos:
+        loc = r["Local"].strip()
+        vis = r["Visitante"].strip()
+        if (loc, vis) in seen_pairs:
+            continue
+        seen_pairs.add((loc, vis))
 
-            pct_l = st_l["vic"] / n_l
-            pct_v = st_v["vic"] / n_v
-            denom = pct_l + pct_v - (2 * pct_l * pct_v)
-            prob_l = round((pct_l - (pct_l * pct_v)) / denom * 100, 1) if denom != 0 else 50.0
+        sl = stats[loc]
+        sv = stats[vis]
+        pct_l = sl["jg"] / sl["jj"] if sl["jj"] > 0 else 0.5
+        pct_v = sv["jg"] / sv["jj"] if sv["jj"] > 0 else 0.5
 
-            prom_off_l = sum(st_l["cf"]) / n_l
-            prom_def_l = sum(st_l["cc"]) / n_l
-            prom_off_v = sum(st_v["cf"]) / n_v
-            prom_def_v = sum(st_v["cc"]) / n_v
+        denom = pct_l + pct_v - (2 * pct_l * pct_v)
+        prob_l = (pct_l - (pct_l * pct_v)) / denom if denom > 0 else 0.5
+        prob_v = 1.0 - prob_l
 
-            varianza_l = sum((x - prom_off_l) ** 2 for x in st_l["cf"]) / (n_l - 1)
-            std_l = math.sqrt(varianza_l) if n_l > 1 else 1.0
+        ice_vic = round(max(prob_l, prob_v) * 100, 1)
+        zona_vic = determinar_zona(ice_vic)
 
-            exp_tot = round((prom_off_l + prom_def_v) / 2 + (prom_off_v + prom_def_l) / 2, 1)
-            factor_m = min(1.0, (n_l + n_v) / 30.0)
-            estab = 1.0 / (1.0 + (std_l / (prom_off_l + 0.1)))
+        prom_cf_l = sl["cf"] / sl["jj"]
+        prom_cc_l = sl["cc"] / sl["jj"]
+        prom_cf_v = sv["cf"] / sv["jj"]
+        prom_cc_v = sv["cc"] / sv["jj"]
+        total_proj = round(((prom_cf_l + prom_cc_v) / 2.0) + ((prom_cf_v + prom_cc_l) / 2.0), 1)
 
-            ice_v = round((abs(prob_l - 50.0) * 2 * 0.5) + (factor_m * 25.0) + (estab * 25.0), 1)
-            ice_a = round((factor_m * 50.0) + (estab * 50.0), 1)
+        ice_altas = round(min(95.0, max(50.0, (total_proj / 220.0) * 70.0)), 1)
 
-            matriz.append({
-                "LOCAL": loc,
-                "VISITANTE": vis,
-                "PROB_LOCAL": prob_l,
-                "PROB_VISITANTE": round(100.0 - prob_l, 1),
-                "ICE_VICTORIA": ice_v,
-                "ZONA_VICTORIA": determinar_zona(ice_v),
-                "TOTAL_PROYECTADO": exp_tot,
-                "ICE_ALTAS": ice_a,
-            })
+        matriz.append({
+            "LOCAL": loc,
+            "VISITANTE": vis,
+            "PROB_LOCAL": round(prob_l * 100, 1),
+            "PROB_VISITANTE": round(prob_v * 100, 1),
+            "ICE_VICTORIA": ice_vic,
+            "ZONA_VICTORIA": zona_vic,
+            "TOTAL_PROYECTADO": total_proj,
+            "ICE_ALTAS": ice_altas,
+        })
+
     return matriz
